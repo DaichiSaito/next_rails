@@ -1,7 +1,7 @@
 import Head from "next/head";
 import Image from "next/image";
 import styles from "../styles/Home.module.css";
-
+import { useEffect } from "react";
 export default function Home() {
   return (
     <div className={styles.container}>
@@ -21,7 +21,7 @@ export default function Home() {
           <code className={styles.code}>pages/index.js</code>
         </p>
         <form action="http://localhost:5000/auth/github" method="post">
-          <button type="submit">ログイン</button>
+          <button type="submit">Railsのomniauthでログイン</button>
         </form>
 
         <div className={styles.grid}>
