@@ -1,6 +1,10 @@
+import { currentUserState } from './../states/currentUser';
 import firebase from 'firebase/app'
 import axios from 'axios'
 import router from 'next/router'
+import { atom, useRecoilState } from 'recoil'
+import { User } from '../types/user'
+import { destroyCookie, setCookie } from 'nookies'
 const provider = new firebase.auth.GoogleAuthProvider()
 type UserRequestParams = {
   token: string;
@@ -9,6 +13,7 @@ type UserRequestParams = {
 }
 
 export const useAuthentication = () => {
+  const [currentUser, setCurrentUser] = useRecoilState(currentUserState)
   const googleLogin = async () => {
     const userCredential = await firebase.auth().signInWithPopup(provider)
     const idToken = await firebase.auth().currentUser?.getIdToken(/* forceRefresh */ true);
@@ -18,7 +23,7 @@ export const useAuthentication = () => {
     if (res.data.error) {
       alert("失敗")
     } else {
-      router.push('/articles')
+      router.push('/portfolios')
     }
   }
 
@@ -32,7 +37,7 @@ export const useAuthentication = () => {
       if (res.data.error) {
         alert("失敗")
       } else {
-        router.push('/articles')
+        router.push('/portfolios')
       } 
     } catch (error) {
       alert(error)
@@ -49,7 +54,7 @@ export const useAuthentication = () => {
       if (res.data.error) {
         alert("失敗")
       } else {
-        router.push('/articles')
+        router.push('/portfolios')
       } 
     } catch (error) {
       alert(error)
@@ -59,7 +64,7 @@ export const useAuthentication = () => {
 
   const loginOrSignup = async (props: UserRequestParams) => {
     const { token, email, name } = props
-    const res = await axios.post('http://localhost:5000/authentications/firebase/login_or_signup', {
+    const res = await axios.post('http://localhost:5000/job_seekers/login_or_signup', {
       user: {
         email,
         name
@@ -74,7 +79,29 @@ export const useAuthentication = () => {
 
   const logout = async () => {
     await firebase.auth().signOut()
-    router.push('/login')
+    router.push('/job_seeker_signup')
   }
-  return { googleLogin, emailLogin, emailSignup, logout }
+
+  const listenStateChanged = () => {
+    firebase.auth().onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        console.log('Set user')
+        console.log(firebaseUser)
+        const idToken = await firebase.auth().currentUser?.getIdToken(/* forceRefresh */ true);
+        const res = await axios.get(`http://localhost:5000/job_seekers/me?token=${idToken}`)
+        const loginUser: User = {
+          uid: firebaseUser.uid,
+          token: idToken as string,
+          profile: res.data.job_seeker.profile
+        }
+        console.log(loginUser)
+        setCurrentUser(loginUser)
+        setCookie(undefined, 'token', idToken)
+      } else {
+        setCurrentUser(null)
+        destroyCookie(undefined, 'token')
+      }
+    })
+  }
+  return { googleLogin, emailLogin, emailSignup, logout, listenStateChanged, currentUser, setCurrentUser }
 }
